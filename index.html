@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>LeadLink Local</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:0;background:#f5f6f8;color:#18181b}header{background:#1e3a8a;color:#fff;padding:14px 16px}header h1{margin:0;font-size:20px}
+nav{display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px;background:#e0e7ff}nav button{border:0;background:#fff;padding:8px 12px;border-radius:8px;font-weight:600}nav button.on{background:#1e3a8a;color:#fff}
+main{max-width:760px;margin:auto;padding:16px}.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px #0002}
+input{width:100%;padding:10px;margin:4px 0 10px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box;font-size:16px}
+.btn{background:#16a34a;color:#fff;border:0;padding:11px 16px;border-radius:8px;font-weight:700}.alt{background:#1e3a8a}.red{background:#b91c1c}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:6px;border-bottom:1px solid #eee;text-align:left}.big{font-size:28px;font-weight:800}
+.code{font-family:monospace;font-size:30px;letter-spacing:3px;background:#fef9c3;padding:10px;border-radius:8px}
+.hide{display:none}.muted{color:#666;font-size:13px}@media print{nav,header,.noprint{display:none}}
+</style></head><body>
+<header><h1>LeadLink Local</h1><div style="color:#c7d2fe;font-size:13px">No sale, no fee.</div></header>
+<nav id="nav"><button data-t="biz">Businesses</button><button data-t="leads">Lead Tracker</button><button data-t="pitch">Pitch Kit</button></nav>
+<main>
+<section id="biz"><div class="card"><h2>Add a business</h2>
+<input id="bn" placeholder="Business name"><input id="bo" placeholder="Customer offer (e.g. 10% off first job)">
+<label>Flat fee per sale ($)</label><input id="bf" type="number" value="100"><label>Big job starts at ($)</label><input id="bt" type="number" value="1000"><label>Big job cut (%)</label><input id="bp" type="number" value="10">
+<button class="btn" onclick="addBiz()">Save business</button></div><div id="bizList"></div></section>
+<section id="leads" class="hide"><div class="card"><h2>Record a sale</h2><p class="muted">Customer shows their code. Enter it with the job total. Fake or reused codes are rejected.</p>
+<input id="lc" placeholder="Code, e.g. JOE-7K3P-Q" style="text-transform:uppercase"><input id="lt" type="number" placeholder="Job total ($)"><button class="btn" onclick="sale()">Mark sold</button><p id="lmsg"></p></div>
+<div class="card"><h2>Your earnings</h2><div id="tot" class="big">$0</div><div id="saleList"></div><button class="btn alt" onclick="exportCSV()">Download CSV</button></div></section>
+<section id="pitch" class="hide"><div class="card"><h2>One-pager</h2><h3>Get new customers. Pay nothing until they buy.</h3><ul>
+<li>I run local video ads for your business at my cost.</li><li>Every customer gets a unique code, so you know exactly who came from me.</li>
+<li>You only pay when a lead becomes a paid sale: a flat <b>$100</b>, or <b>10%</b> on big jobs.</li><li>Build the fee into your estimate, so it costs you nothing out of pocket.</li><li>No setup fees. Cancel anytime.</li></ul></div>
+<div class="card"><h2>Referral agreement</h2><ol><li><b>Parties.</b> ______________ ("Business") and Leon Tucker ("Marketer").</li>
+<li><b>Service.</b> Marketer advertises Business at Marketer's own cost. No upfront or monthly fees.</li>
+<li><b>Qualified sale.</b> A paid sale to a customer who presents a valid LeadLink code issued for Business.</li>
+<li><b>Fee.</b> $____ per qualified sale, or ____% of the invoice for jobs of $____ or more. Business may build this fee into its pricing.</li>
+<li><b>Reporting.</b> Business records each qualified sale within 7 days of payment.</li><li><b>Payment.</b> Monthly, within 15 days of month end.</li>
+<li><b>Term.</b> Either party may end this with 14 days' written notice. Fees for earlier sales remain due.</li></ol>
+<p>Business: ______________ Date: ______<br>Marketer: ______________ Date: ______</p><p class="muted">Template only, not legal advice.</p>
+<button class="btn alt noprint" onclick="print()">Print</button></div></section>
+<section id="claim" class="hide"><div class="card" style="text-align:center"><h2 id="cName"></h2><p id="cOffer" class="big" style="font-size:22px"></p>
+<div id="cForm"><button class="btn" onclick="claim()">Get my code</button></div>
+<div id="cOut" class="hide"><p>Show this code when you book or pay:</p><div id="cCode" class="code"></div><p class="muted">Screenshot it so you don't lose it.</p></div></div></section></main>
+<script>
+const S=k=>JSON.parse(localStorage.getItem(k)||'[]'),W=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const hs=s=>{let x=7;for(const c of s)x=(x*31+c.charCodeAt(0))>>>0;return x};
+const chk=(p,r,k)=>A[hs(p+r+k)%A.length];
+const pre=n=>(n.replace(/[^a-z]/gi,'').toUpperCase()+'XXX').slice(0,3);
+const enc=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/=+$/,'');
+const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s))));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function tab(t){document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!==t));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t))}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+function addBiz(){const n=bn.value.trim();if(!n)return alert('Name needed');const b=S('biz');b.push({n,o:bo.value.trim()||'Special offer',p:pre(n),k:Math.random().toString(36).slice(2,8),f:+bf.value,t:+bt.value,pc:+bp.value});W('biz',b);bn.value=bo.value='';renderBiz()}
+const link=b=>location.href.split(/[?#]/)[0]+'?c='+enc({n:b.n,o:b.o,p:b.p,k:b.k});
+function delBiz(i){if(!confirm('Remove?'))return;const b=S('biz');b.splice(i,1);W('biz',b);renderBiz()}
+function renderBiz(){bizList.innerHTML=S('biz').map((b,i)=>{const l=link(b);return `<div class="card"><h3>${esc(b.n)} <span class="muted">(${b.p})</span></h3><p>${esc(b.o)}</p><p class="muted">$${b.f} per sale, or ${b.pc}% on jobs $${b.t}+</p><b>Ad link</b> (put in the video ad):<input value="${esc(l)}" readonly onclick="this.select()"><img alt="QR" width="160" height="160" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(l)}"><br><button class="btn red" onclick="delBiz(${i})">Remove</button></div>`}).join('')}
+let C;function claim(){const r=Array.from({length:4},()=>A[Math.floor(Math.random()*A.length)]).join('');cCode.textContent=`${C.p}-${r}-${chk(C.p,r,C.k)}`;cForm.classList.add('hide');cOut.classList.remove('hide')}
+function sale(){const c=lc.value.trim().toUpperCase(),t=+lt.value,m=c.match(/^([A-Z]{3})-([A-Z0-9]{4})-([A-Z0-9])$/);if(!m||!t)return lmsg.textContent='Enter a code like ABC-1234-X and a job total.';
+const b=S('biz').find(b=>b.p===m[1]&&chk(m[1],m[2],b.k)===m[3]);if(!b)return lmsg.textContent='❌ Not a valid code for any of your businesses.';
+const s=S('sales');if(s.some(x=>x.c===c))return lmsg.textContent='⚠️ That code was already used.';const fee=t>=b.t?Math.round(t*b.pc)/100:b.f;
+s.push({c,b:b.n,t,fee,d:new Date().toISOString().slice(0,10)});W('sales',s);lmsg.textContent=`✅ Sale recorded. Your cut: $${fee.toFixed(2)}`;lc.value=lt.value='';renderSales()}
+function renderSales(){const s=S('sales');tot.textContent='$'+s.reduce((a,x)=>a+x.fee,0).toFixed(2);saleList.innerHTML=s.length?`<table><tr><th>Date</th><th>Business</th><th>Code</th><th>Job</th><th>Cut</th></tr>${s.map(x=>`<tr><td>${x.d}</td><td>${esc(x.b)}</td><td>${x.c}</td><td>$${x.t}</td><td>$${x.fee.toFixed(2)}</td></tr>`).join('')}</table>`:'<p class="muted">No sales yet.</p>'}
+function exportCSV(){const s=S('sales');const csv='date,business,code,job_total,your_cut\n'+s.map(x=>[x.d,'"'+x.b+'"',x.c,x.t,x.fee].join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='leadlink-sales.csv';a.click()}
+const q=new URLSearchParams(location.search).get('c');
+if(q){try{C=dec(q);nav.classList.add('hide');cName.textContent=C.n;cOffer.textContent=C.o;tab('claim')}catch(e){tab('biz')}}else{tab('biz');renderBiz();renderSales()}
+</script></body></html>
